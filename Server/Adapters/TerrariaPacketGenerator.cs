@@ -40,7 +40,7 @@ public class TerrariaPacketGenerator : IPacketGenerator, IDisposable
         using var ms = new MemoryStream();
         using var writer = new BinaryWriter(ms);
 
-        ms.Position = 2;
+        ms.Position = sizeof(short);
         writer.Write(messageId);
 
         var terrariaTargets = targets.Cast<TerrariaNetworkClient>().ToList();
