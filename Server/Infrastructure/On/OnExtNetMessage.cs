@@ -14,7 +14,11 @@ namespace PacketManager.Server.Infrastructure.On
     public static class OnExtNetMessage
     {
         public static RuntimeMethodHandle OrigSendDataHandler => typeof(Terraria.NetMessage)
+#if DEBUG
+            .GetMethod("mfwh_orig_SendData")!.MethodHandle;
+#else
             .GetMethod("orig_SendData")!.MethodHandle;
+#endif
 
         [EditorBrowsable(EditorBrowsableState.Never)]
         public delegate void OrigOrigSendData(int msgType, int remoteClient, int ignoreClient, NetworkText text,

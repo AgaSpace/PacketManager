@@ -19,74 +19,31 @@ public class PacketManager(int maxPlayers, IPacketGenerator generator, INetworkS
 
         if (clients.Count == 0) return false;
 
-        var clientsWithChains = clients
-            .Select(c => new
-            {
-                Client = c,
-                Builders = Registry.GetBuilders(c.Id, messageId)
-            })
-            .ToList();
+        var groups = clients.GroupBy(c =>
+            Registry.GetBuilder(c.Id, messageId),
+            new PacketBuilderEqualityComparer());
 
-        if (clientsWithChains.All(x => x.Builders.Count == 0))
+        var groupList = groups.ToList();
+        if (groupList.Count == 1 && groupList[0].Key == null)
             return false;
 
-        var groups = clientsWithChains
-            .Where(x => x.Builders.Count > 0)
-            .GroupBy(x => x.Builders, new BuilderListEqualityComparer());
-
-        foreach (var group in groups)
+        foreach (var group in groupList)
         {
-            var builders = group.Key;
-            var groupClients = group.Select(x => x.Client).ToList();
-
-            var buffer = _generator.GenerateCustom(builders, messageId, data, groupClients);
+            byte[] buffer = group.Key == null
+                ? _generator.GenerateOriginal(messageId, data)
+                : _generator.GenerateCustom(group.Key, messageId, data, [.. group]);
 
             if (buffer.Length > 0)
-                _network.SendTo(groupClients, buffer);
-        }
-
-        // Обрабатываем клиентов без билдеров (если есть) — отправляем оригинал
-        var noBuilderClients = clientsWithChains
-            .Where(x => x.Builders.Count == 0)
-            .Select(x => x.Client)
-            .ToList();
-
-        if (noBuilderClients.Count > 0)
-        {
-            var originalBuffer = _generator.GenerateOriginal(messageId, data);
-            _network.SendTo(noBuilderClients, originalBuffer);
+                _network.SendTo(group, buffer);
         }
 
         return true;
     }
 
-    // Компаратор для сравнения списков билдеров по ссылкам (для группировки)
-    private class BuilderListEqualityComparer : IEqualityComparer<IReadOnlyList<IPacketBuilder>>
+    private class PacketBuilderEqualityComparer : IEqualityComparer<IPacketBuilder?>
     {
-        public bool Equals(IReadOnlyList<IPacketBuilder>? x, IReadOnlyList<IPacketBuilder>? y)
-        {
-            if (ReferenceEquals(x, y)) return true;
-            if (x == null || y == null) return false;
-            if (x.Count != y.Count) return false;
-
-            // Сравниваем по ссылкам элементов
-            for (int i = 0; i < x.Count; i++)
-            {
-                if (!ReferenceEquals(x[i], y[i]))
-                    return false;
-            }
-            return true;
-        }
-
-        public int GetHashCode(IReadOnlyList<IPacketBuilder> obj)
-        {
-            int hash = 17;
-            foreach (var builder in obj)
-            {
-                hash = hash * 31 + (builder?.GetHashCode() ?? 0);
-            }
-            return hash;
-        }
+        public bool Equals(IPacketBuilder? x, IPacketBuilder? y) => ReferenceEquals(x, y);
+        public int GetHashCode(IPacketBuilder? obj) => obj?.GetHashCode() ?? 0;
     }
 
     private class DummyClient(int id) : INetworkClient

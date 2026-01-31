@@ -1,5 +1,4 @@
-﻿using System.IO;
-using Terraria;
+﻿using Terraria;
 using Terraria.Localization;
 using PacketManager.Core.Abstractions;
 using PacketManager.Core.Data;
@@ -35,12 +34,9 @@ public class TerrariaPacketGenerator : IPacketGenerator, IDisposable
         }
     }
 
-    public byte[] GenerateCustom(IReadOnlyList<IPacketBuilder> builders, byte messageId, PacketData data,
+    public byte[] GenerateCustom(IPacketBuilder builder, byte messageId, PacketData data,
         IReadOnlyCollection<INetworkClient> targets)
     {
-        if (builders.Count == 0)
-            return GenerateOriginal(messageId, data);
-
         using var ms = new MemoryStream();
         using var writer = new BinaryWriter(ms);
 
@@ -49,12 +45,8 @@ public class TerrariaPacketGenerator : IPacketGenerator, IDisposable
 
         var terrariaTargets = targets.Cast<TerrariaNetworkClient>().ToList();
 
-        // ИЗМЕНЕНО: Цепочка билдеров
-        foreach (var builder in builders)
-        {
-            var context = new TerrariaBuildContext(messageId, writer, terrariaTargets, data, _lastNum);
-            builder.Build(context);
-        }
+        var context = new TerrariaBuildContext(messageId, writer, terrariaTargets, data, _lastNum);
+        builder.Build(context);
 
         var len = (short)ms.Position;
         ms.Position = 0;
