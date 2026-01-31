@@ -19,7 +19,6 @@ public class PacketManager(int maxPlayers, IPacketGenerator generator, INetworkS
 
         if (clients.Count == 0) return false;
 
-        // ИЗМЕНЕНО: Группировка по полному списку билдеров (цепочке), а не по первому
         var clientsWithChains = clients
             .Select(c => new
             {
@@ -28,21 +27,18 @@ public class PacketManager(int maxPlayers, IPacketGenerator generator, INetworkS
             })
             .ToList();
 
-        // Если у всех нет билдеров — пропускаем
         if (clientsWithChains.All(x => x.Builders.Count == 0))
             return false;
 
-        // Группируем клиентов по одинаковым цепочкам билдеров (оптимизация)
         var groups = clientsWithChains
             .Where(x => x.Builders.Count > 0)
             .GroupBy(x => x.Builders, new BuilderListEqualityComparer());
 
         foreach (var group in groups)
         {
-            var builders = group.Key; // Список билдеров (цепочка)
+            var builders = group.Key;
             var groupClients = group.Select(x => x.Client).ToList();
 
-            // Генерируем пакет применением всей цепочки билдеров
             var buffer = _generator.GenerateCustom(builders, messageId, data, groupClients);
 
             if (buffer.Length > 0)
