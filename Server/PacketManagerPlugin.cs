@@ -70,27 +70,21 @@ namespace PacketManager.Server
             args.Handled = _manager!.ProcessOutgoingPacket((byte)args.MsgId, data, args.ignoreClient, args.remoteClient);
         }
 
-        private void ILSendData(ILContext il)
+        private void ILSendData(ILContext context)
         {
-            var processor = il.Body.GetILProcessor();
-            var instrs = il.Body.Instructions;
+            ILCursor cursor = new(context);
+            cursor.GotoNext(i => i.OpCode.Code == Code.Call
+                && i.Operand is MethodReference method
+                && method.Name == nameof(NetMessage.OnPacketWrite));
 
-            for (int i = 0; i < instrs.Count; i++)
-            {
-                if (instrs[i].OpCode.Code == Code.Call &&
-                    ((MethodReference)instrs[i].Operand).Name == nameof(NetMessage.OnPacketWrite))
-                {
-                    var instruction = instrs[i];
-                    var after = instrs[i + 1];
-
-                    processor.InsertAfter(instruction, instruction = processor.Create(OpCodes.Ldarg_2));
-                    processor.InsertAfter(instruction, instruction = processor.Create(OpCodes.Ldc_I4, TerrariaPacketGenerator.GetNameHash()));
-                    processor.InsertAfter(instruction, instruction = processor.Create(OpCodes.Ceq));
-                    processor.InsertAfter(instruction, instruction = processor.Create(OpCodes.Brfalse, after));
-                    processor.InsertAfter(instruction, instruction = processor.Create(OpCodes.Ret));
-                    break;
-                }
-            }
+            cursor.Index++;
+            Instruction after = cursor.Next;
+            
+            cursor.Emit(OpCodes.Ldarg_2);
+            cursor.Emit(OpCodes.Ldc_I4, TerrariaPacketGenerator.GetNameHash());
+            cursor.Emit(OpCodes.Ceq);
+            cursor.Emit(OpCodes.Brfalse, after);
+            cursor.Emit(OpCodes.Ret);
         }
 
         private void OnPacketWrite(On.Terraria.NetMessage.orig_OnPacketWrite orig, int num,
