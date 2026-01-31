@@ -1,10 +1,19 @@
-﻿using Terraria;
+﻿using System.IO;
+using Terraria;
 using Terraria.Localization;
 using PacketManager.Core.Abstractions;
 using PacketManager.Core.Data;
 
 namespace PacketManager.Server.Adapters;
 
+/// <summary>
+/// Генератор пакетов для Terraria, использующий IL-хуки для перехвата оригинальных байтов
+/// и создания кастомных пакетов через билдеры.
+/// </summary>
+/// <remarks>
+/// Использует статические поля для хранения перехваченных данных, так как orig_SendData
+/// работает через глобальное состояние игры. Потокобезопасность обеспечивается через Lock.
+/// </remarks>
 public class TerrariaPacketGenerator : IPacketGenerator, IDisposable
 {
     private static readonly Lock Lock = new();
@@ -12,6 +21,17 @@ public class TerrariaPacketGenerator : IPacketGenerator, IDisposable
     private static int _lastNum;
     private static readonly int NameHash = "PacketManagerAPI".GetHashCode();
 
+    /// <summary>
+    /// Генерирует оригинальный пакет, используя стандартный метод Terraria NetMessage.orig_SendData.
+    /// </summary>
+    /// <param name="messageId">Идентификатор типа пакета.</param>
+    /// <param name="data">Данные пакета (параметры SendData).</param>
+    /// <returns>Массив байтов оригинального пакета, включая заголовок длины.</returns>
+    /// <remarks>
+    /// Вызывает orig_SendData с специальным флагом ignoreClient = NameHash,
+    /// что вызывает перехват байтов в OnPacketWrite без реальной отправки по сети.
+    /// Использует Lock для потокобезопасности.
+    /// </remarks>
     public byte[] GenerateOriginal(byte messageId, PacketData data)
     {
         lock (Lock)
@@ -34,13 +54,25 @@ public class TerrariaPacketGenerator : IPacketGenerator, IDisposable
         }
     }
 
+    /// <summary>
+    /// Генерирует кастомный пакет, используя предоставленный билдер.
+    /// </summary>
+    /// <param name="builder">Билдер для генерации содержимого пакета.</param>
+    /// <param name="messageId">Идентификатор типа пакета.</param>
+    /// <param name="data">Оригинальные данные для передачи в контекст билдера.</param>
+    /// <param name="targets">Целевые клиенты.</param>
+    /// <returns>Массив байтов готового пакета с заголовком длины.</returns>
+    /// <remarks>
+    /// Создает MemoryStream, записывает MessageId, вызывает Build(),
+    /// затем возвращается в начало и записывает длину пакета.
+    /// </remarks>
     public byte[] GenerateCustom(IPacketBuilder builder, byte messageId, PacketData data,
         IReadOnlyCollection<INetworkClient> targets)
     {
         using var ms = new MemoryStream();
         using var writer = new BinaryWriter(ms);
 
-        ms.Position = sizeof(short);
+        ms.Position = 2;
         writer.Write(messageId);
 
         var terrariaTargets = targets.Cast<TerrariaNetworkClient>().ToList();
@@ -55,13 +87,33 @@ public class TerrariaPacketGenerator : IPacketGenerator, IDisposable
         return ms.ToArray();
     }
 
+    /// <summary>
+    /// Сохраняет перехваченный буфер байтов из оригинального метода SendData.
+    /// </summary>
+    /// <param name="buffer">Массив байтов пакета.</param>
+    /// <param name="length">Фактическая длина пакета.</param>
+    /// <remarks>
+    /// Вызывается из OnPacketWrite хука при обнаружении флага NameHash.
+    /// </remarks>
     public static void CaptureBuffer(byte[] buffer, int length)
     {
         _capturedBuffer = [.. buffer.Take(length)];
     }
 
+    /// <summary>
+    /// Сохраняет вспомогательное значение Num из OnPacketWrite.
+    /// </summary>
+    /// <param name="num">Значение параметра num.</param>
     public static void SetLastNum(int num) => _lastNum = num;
+
+    /// <summary>
+    /// Получает хеш-идентификатор для маркировки перехваченных пакетов.
+    /// </summary>
+    /// <returns>Хеш строки "PacketManagerAPI".</returns>
     public static int GetNameHash() => NameHash;
 
+    /// <summary>
+    /// Освобождает ресурсы генератора.
+    /// </summary>
     public void Dispose() { }
 }
