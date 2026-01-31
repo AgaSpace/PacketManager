@@ -51,7 +51,7 @@ namespace MyPlugin.Builders
         public int Priority => 100;
         
         // PacketTypes.PlayerHP = 16
-        public byte MessageId => 16;
+        public int MessageId => 16;
 
         public void Build(IPacketBuildContext context)
         {
