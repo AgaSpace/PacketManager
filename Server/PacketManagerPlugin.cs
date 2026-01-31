@@ -10,14 +10,14 @@ using TerrariaApi.Server;
 namespace PacketManager.Server;
 
 /// <summary>
-/// Основной плагин TShock для PacketManager.
-/// Управляет инициализацией системы, перехватывает исходящие пакеты через IL-хуки
+/// Основной плагин <see cref="TShockAPI"/> для <see cref="PacketManager.Core"/>.
+/// Управляет инициализацией системы, перехватывает исходящие пакеты через <see cref="IL"/>-хуки
 /// и диспетчеризирует их обработку билдерам.
 /// </summary>
 /// <remarks>
 /// Создает новый экземпляр плагина.
 /// </remarks>
-/// <param name="game">Экземпляр Main игры.</param>
+/// <param name="game">Экземпляр <see cref="Terraria.Main"/> игры.</param>
 [ApiVersion(2, 1)]
 public class PacketManagerPlugin(Main game) : TerrariaPlugin(game)
 {
@@ -58,7 +58,7 @@ public class PacketManagerPlugin(Main game) : TerrariaPlugin(game)
     /// <summary>
     /// Освобождает ресурсы плагина при выгрузке.
     /// </summary>
-    /// <param name="disposing">true при явном вызове Dispose; false при финализации.</param>
+    /// <param name="disposing"><see cref="true"/> при явном вызове Dispose; <see cref="false"/> при финализации.</param>
     protected override void Dispose(bool disposing)
     {
         if (disposing)
@@ -73,7 +73,7 @@ public class PacketManagerPlugin(Main game) : TerrariaPlugin(game)
     }
 
     /// <summary>
-    /// Обработчик исходящих пакетов. Перехватывает SendData и делегирует обработку менеджеру.
+    /// Обработчик исходящих пакетов. Перехватывает <see cref="NetMessage.SendData"/> и делегирует обработку менеджеру.
     /// </summary>
     /// <param name="args">Аргументы события отправки данных.</param>
     private void OnSendData(SendDataEventArgs args)
@@ -96,11 +96,11 @@ public class PacketManagerPlugin(Main game) : TerrariaPlugin(game)
     }
 
     /// <summary>
-    /// Модифицирует IL-код метода orig_SendData, добавляя проверку на специальный ignoreClient.
-    /// Если ignoreClient равен NameHash, метод возвращает управление сразу после вызова OnPacketWrite,
+    /// Модифицирует <see cref="IL"/>-код метода <see cref="NetMessage.SendData"/>, добавляя проверку на специальный ignoreClient.
+    /// Если ignoreClient равен <see cref="TerrariaPacketGenerator.GetNameHash"/>, метод возвращает управление сразу после вызова <see cref="NetMessage.OnPacketWrite"/>,
     /// предотвращая фактическую отправку пакета (используется для перехвата байтов).
     /// </summary>
-    /// <param name="context">Контекст IL для модификации.</param>
+    /// <param name="context">Контекст <see cref="IL"/> для модификации.</param>
     private void ILSendData(ILContext context)
     {
         ILCursor cursor = new(context);
@@ -119,8 +119,8 @@ public class PacketManagerPlugin(Main game) : TerrariaPlugin(game)
     }
 
     /// <summary>
-    /// Обработчик, вызываемый после записи пакета в MemoryStream.
-    /// Перехватывает сгенерированные байты, если пакет сгенерирован с флагом NameHash.
+    /// Обработчик, вызываемый после записи пакета в <see cref="MemoryStream"/>.
+    /// Перехватывает сгенерированные байты, если пакет сгенерирован с флагом <see cref="TerrariaPacketGenerator.GetNameHash"/>.
     /// </summary>
     /// <param name="orig">Оригинальный метод.</param>
     /// <param name="num">Вспомогательный номер.</param>

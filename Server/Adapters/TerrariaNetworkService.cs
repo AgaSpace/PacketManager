@@ -4,7 +4,7 @@ using PacketManager.Core.Abstractions;
 namespace PacketManager.Server.Adapters;
 
 /// <summary>
-/// Реализация сетевого сервиса для Terraria.
+/// Реализация сетевого сервиса для <see cref="Terraria"/>.
 /// Обеспечивает отправку данных клиентам и получение списка активных игроков.
 /// </summary>
 public class TerrariaNetworkService : INetworkService

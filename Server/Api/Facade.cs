@@ -3,7 +3,7 @@
 namespace PacketManager.Server.Api;
 
 /// <summary>
-/// Фасад для доступа к API PacketManager из других плагинов.
+/// Фасад для доступа к <see cref="Api"/> из других плагинов.
 /// Предоставляет статические методы для управления билдерами без необходимости 
 /// получения ссылок на сервисы через Dependency Injection.
 /// </summary>
@@ -12,7 +12,7 @@ public static class Facade
     private static Core.Implementations.PacketManager? _manager;
 
     /// <summary>
-    /// Инициализирует фасад. Вызывается автоматически при загрузке PacketManagerPlugin.
+    /// Инициализирует фасад. Вызывается автоматически при загрузке <see cref="PacketManagerPlugin"/>.
     /// </summary>
     /// <param name="manager">Экземпляр менеджера пакетов.</param>
     /// <exception cref="InvalidOperationException">Выбрасывается, если фасад уже инициализирован.</exception>
@@ -28,7 +28,7 @@ public static class Facade
     /// <summary>
     /// Добавляет билдер пакета для указанного игрока.
     /// </summary>
-    /// <param name="playerId">Индекс игрока (whoAmI).</param>
+    /// <param name="playerId">Индекс игрока (<see cref="Terraria.RemoteClient.Id"/>).</param>
     /// <param name="builder">Билдер для добавления.</param>
     /// <returns>true при успешном добавлении, false при ошибке.</returns>
     public static bool AddBuilder(int playerId, IPacketBuilder builder) =>
@@ -39,7 +39,7 @@ public static class Facade
     /// </summary>
     /// <param name="playerId">Индекс игрока.</param>
     /// <param name="builder">Экземпляр билдера для удаления (должен быть тем же объектом, что был добавлен).</param>
-    /// <returns>true при успешном удалении, false если билдер не найден.</returns>
+    /// <returns>true при успешном удалении, <see cref="false"/> если билдер не найден.</returns>
     public static bool RemoveBuilder(int playerId, IPacketBuilder builder) =>
         Registry.RemoveBuilder(playerId, builder).IsSuccess;
 
@@ -48,7 +48,7 @@ public static class Facade
     /// </summary>
     /// <param name="playerId">Индекс игрока.</param>
     /// <param name="messageId">Идентификатор типа пакета (Message ID).</param>
-    /// <returns>true, если для данного типа пакета зарегистрирован билдер.</returns>
-    public static bool HasBuilder(int playerId, byte messageId) =>
+    /// <returns><see cref="true"/>, если для данного типа пакета зарегистрирован билдер.</returns>
+    public static bool HasBuilder(int playerId, int messageId) =>
         Registry.HasBuilder(playerId, messageId);
 }

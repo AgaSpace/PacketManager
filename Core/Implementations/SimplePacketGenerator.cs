@@ -24,12 +24,12 @@ public class SimplePacketGenerator : IPacketGenerator
     /// Используется в тестовых сценариях или когда требуется минимальная реализация.
     /// Не воспроизводит полную сериализацию пакетов Terraria.
     /// </remarks>
-    public virtual byte[] GenerateOriginal(byte messageId, PacketData data)
+    public virtual byte[] GenerateOriginal(int messageId, PacketData data)
     {
         using var ms = new MemoryStream();
         using var writer = new BinaryWriter(ms);
         writer.Write((short)0); // Резерв под длину (2 байта)
-        writer.Write(messageId); // ID пакета (1 байт)
+        writer.Write((byte)messageId); // ID пакета (1 байт)
         return ms.ToArray();
     }
 
@@ -50,14 +50,14 @@ public class SimplePacketGenerator : IPacketGenerator
     /// <item>Вычисляет фактическую длину, возвращается в начало и записывает её.</item>
     /// </list>
     /// </remarks>
-    public byte[] GenerateCustom(IPacketBuilder builder, byte messageId, PacketData data,
+    public byte[] GenerateCustom(IPacketBuilder builder, int messageId, PacketData data,
         IReadOnlyCollection<INetworkClient> targets)
     {
         using var ms = new MemoryStream();
         using var writer = new BinaryWriter(ms);
 
         ms.Position = 2; // Резерв под длину (short)
-        writer.Write(messageId);
+        writer.Write((byte)messageId);
 
         // Вызываем билдер для заполнения тела пакета
         var context = new PacketBuildContext(messageId, writer, targets, data);

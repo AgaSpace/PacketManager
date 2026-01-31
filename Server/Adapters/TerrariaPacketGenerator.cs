@@ -6,12 +6,12 @@ using PacketManager.Core.Data;
 namespace PacketManager.Server.Adapters;
 
 /// <summary>
-/// Генератор пакетов для Terraria, использующий IL-хуки для перехвата оригинальных байтов
+/// Генератор пакетов для <see cref="Terraria"/>, использующий <see cref="IL"/>-хуки для перехвата оригинальных байтов
 /// и создания кастомных пакетов через билдеры.
 /// </summary>
 /// <remarks>
-/// Использует статические поля для хранения перехваченных данных, так как <see cref="Terraria.NetMessage.SendData(int, int, int, NetworkText, int, float, float, float, int, int, int)"/>
-/// работает через глобальное состояние игры. Потокобезопасность обеспечивается через Lock.
+/// Использует статические поля для хранения перехваченных данных, так как <see cref="Terraria.NetMessage.SendData"/>
+/// работает через глобальное состояние игры. Потокобезопасность обеспечивается через <see cref="Lock"/>.
 /// </remarks>
 public class TerrariaPacketGenerator : IPacketGenerator, IDisposable
 {
@@ -21,17 +21,17 @@ public class TerrariaPacketGenerator : IPacketGenerator, IDisposable
     private static readonly int NameHash = "PacketManagerAPI".GetHashCode();
 
     /// <summary>
-    /// Генерирует оригинальный пакет, используя стандартный метод Terraria <see cref="Terraria.NetMessage.SendData(int, int, int, NetworkText, int, float, float, float, int, int, int)"/>.
+    /// Генерирует оригинальный пакет, используя стандартный метод <see cref="Terraria"/> <see cref="NetMessage.SendData"/>.
     /// </summary>
     /// <param name="messageId">Идентификатор типа пакета.</param>
-    /// <param name="data">Данные пакета (параметры <see cref="Terraria.NetMessage.SendData(int, int, int, NetworkText, int, float, float, float, int, int, int)"/>).</param>
+    /// <param name="data">Данные пакета (параметры <see cref="NetMessage.SendData"/>).</param>
     /// <returns>Массив байтов оригинального пакета, включая заголовок длины.</returns>
     /// <remarks>
-    /// Вызывает <see cref="Terraria.NetMessage.SendData(int, int, int, NetworkText, int, float, float, float, int, int, int)"/> с специальным флагом ignoreClient = NameHash,
-    /// что вызывает перехват байтов в <see cref="NetMessage.OnPacketWrite(int, MemoryStream, OTAPI.PacketWriter, int, int, int, NetworkText, int, float, float, float, int, int, int)"/> без реальной отправки по сети.
-    /// Использует Lock для потокобезопасности.
+    /// Вызывает <see cref="NetMessage.SendData"/> с специальным флагом ignoreClient = <see cref="NameHash"/>,
+    /// что вызывает перехват байтов в <see cref="NetMessage.OnPacketWrite"/> без реальной отправки по сети.
+    /// Использует <see cref="Lock"/> для потокобезопасности.
     /// </remarks>
-    public byte[] GenerateOriginal(byte messageId, PacketData data)
+    public byte[] GenerateOriginal(int messageId, PacketData data)
     {
         lock (Lock)
         {
@@ -54,18 +54,18 @@ public class TerrariaPacketGenerator : IPacketGenerator, IDisposable
     }
 
     /// <summary>
-    /// Генерирует кастомный пакет, используя предоставленный билдер.
+    /// Генерирует кастомный пакет, используя предоставленный <see cref="IPacketBuilder"/>.
     /// </summary>
-    /// <param name="builder">Билдер для генерации содержимого пакета.</param>
+    /// <param name="builder"><see cref="IPacketBuilder"/> для генерации содержимого пакета.</param>
     /// <param name="messageId">Идентификатор типа пакета.</param>
-    /// <param name="data">Оригинальные данные для передачи в контекст билдера.</param>
+    /// <param name="data">Оригинальные данные для передачи в контекст <see cref="IPacketBuilder"/>.</param>
     /// <param name="targets">Целевые клиенты.</param>
     /// <returns>Массив байтов готового пакета с заголовком длины.</returns>
     /// <remarks>
-    /// Создает <see cref="MemoryStream"/>, записывает <paramref name="messageId"/>, вызывает <see cref="IPacketBuilder.Build(IPacketBuildContext)"/>,
+    /// Создает <see cref="MemoryStream"/>, записывает <paramref name="messageId"/>, вызывает <see cref="IPacketBuilder.Build"/>,
     /// затем возвращается в начало и записывает длину пакета.
     /// </remarks>
-    public byte[] GenerateCustom(IPacketBuilder builder, byte messageId, PacketData data,
+    public byte[] GenerateCustom(IPacketBuilder builder, int messageId, PacketData data,
         IReadOnlyCollection<INetworkClient> targets)
     {
         using var ms = new MemoryStream();
@@ -87,12 +87,12 @@ public class TerrariaPacketGenerator : IPacketGenerator, IDisposable
     }
 
     /// <summary>
-    /// Сохраняет перехваченный буфер байтов из оригинального метода <see cref="Terraria.NetMessage.SendData(int, int, int, NetworkText, int, float, float, float, int, int, int)"/>.
+    /// Сохраняет перехваченный буфер байтов из оригинального метода <see cref="NetMessage.SendData"/>.
     /// </summary>
     /// <param name="buffer">Массив байтов пакета.</param>
     /// <param name="length">Фактическая длина пакета.</param>
     /// <remarks>
-    /// Вызывается из <see cref="NetMessage.OnPacketWrite(int, MemoryStream, OTAPI.PacketWriter, int, int, int, NetworkText, int, float, float, float, int, int, int)"/> хука при обнаружении флага NameHash.
+    /// Вызывается из <see cref="NetMessage.OnPacketWrite"/> хука при обнаружении флага NameHash.
     /// </remarks>
     public static void CaptureBuffer(byte[] buffer, int length)
     {
@@ -100,7 +100,7 @@ public class TerrariaPacketGenerator : IPacketGenerator, IDisposable
     }
 
     /// <summary>
-    /// Сохраняет вспомогательное значение Num из <see cref="NetMessage.OnPacketWrite(int, MemoryStream, OTAPI.PacketWriter, int, int, int, NetworkText, int, float, float, float, int, int, int)"/>.
+    /// Сохраняет вспомогательное значение Num из <see cref="NetMessage.OnPacketWrite"/>.
     /// </summary>
     /// <param name="num">Значение параметра num.</param>
     public static void SetLastNum(int num) => _lastNum = num;

@@ -50,7 +50,7 @@ public interface IPacketBuilderRegistry
     /// <param name="playerId">Индекс игрока.</param>
     /// <param name="messageId">Идентификатор типа пакета.</param>
     /// <returns>true, если для данного типа пакета зарегистрирован билдер.</returns>
-    bool HasBuilder(int playerId, byte messageId);
+    bool HasBuilder(int playerId, int messageId);
 
     /// <summary>
     /// Получает билдер с максимальным приоритетом для указанного типа пакета.
@@ -60,5 +60,5 @@ public interface IPacketBuilderRegistry
     /// <returns>
     /// Билдер с наивысшим приоритетом или null, если билдеров для данного типа нет.
     /// </returns>
-    IPacketBuilder? GetBuilder(int playerId, byte messageId);
+    IPacketBuilder? GetBuilder(int playerId, int messageId);
 }

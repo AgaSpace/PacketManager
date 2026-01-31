@@ -10,17 +10,17 @@ namespace PacketManager.Server.Extensions;
 public static class TSPlayerExtensions
 {
     /// <summary>
-    /// Получает менеджер пакетов для игрока TShock.
+    /// Получает менеджер пакетов для <see cref="TSPlayer"/>.
     /// </summary>
-    /// <param name="player">Экземпляр TSPlayer.</param>
+    /// <param name="player">Экземпляр <see cref="TSPlayer"/>.</param>
     /// <returns>Менеджер билдеров для данного игрока.</returns>
     public static PlayerPacketManager GetPacketManager(this TSPlayer player) =>
         new(player.Index);
 
     /// <summary>
-    /// Получает менеджер пакетов для игрока Terraria.
+    /// Получает менеджер пакетов для игрока <see cref="Terraria"/>.
     /// </summary>
-    /// <param name="player">Экземпляр Player.</param>
+    /// <param name="player">Экземпляр <see cref="Terraria.Player"/>.</param>
     /// <returns>Менеджер билдеров для данного игрока.</returns>
     public static PlayerPacketManager GetPacketManager(this Player player) =>
         new(player.whoAmI);

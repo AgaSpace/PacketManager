@@ -17,7 +17,7 @@ public interface IPacketBuilder
     /// Получает идентификатор типа пакета (Message ID), который обрабатывает этот билдер.
     /// Например: 16 для PlayerHP, 13 для SyncPlayer и т.д.
     /// </summary>
-    byte MessageId { get; }
+    int MessageId { get; }
 
     /// <summary>
     /// Генерирует содержимое пакета в бинарный поток.

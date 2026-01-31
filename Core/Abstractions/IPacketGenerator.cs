@@ -18,7 +18,7 @@ public interface IPacketGenerator
     /// Использует IL-хуки или Reflection для вызова оригинального метода SendData
     /// и перехвата сгенерированных байтов.
     /// </remarks>
-    byte[] GenerateOriginal(byte messageId, PacketData data);
+    byte[] GenerateOriginal(int messageId, PacketData data);
 
     /// <summary>
     /// Генерирует кастомный пакет, используя предоставленный билдер.
@@ -28,6 +28,6 @@ public interface IPacketGenerator
     /// <param name="data">Оригинальные данные для передачи в контекст билдера.</param>
     /// <param name="targets">Целевые клиенты, которым будет отправлен пакет.</param>
     /// <returns>Массив байтов готового пакета с заголовком длины.</returns>
-    byte[] GenerateCustom(IPacketBuilder builder, byte messageId, PacketData data,
+    byte[] GenerateCustom(IPacketBuilder builder, int messageId, PacketData data,
         IReadOnlyCollection<INetworkClient> targets);
 }

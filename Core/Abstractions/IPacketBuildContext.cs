@@ -10,7 +10,7 @@ public interface IPacketBuildContext
     /// <summary>
     /// Получает идентификатор типа обрабатываемого пакета.
     /// </summary>
-    byte MessageId { get; }
+    int MessageId { get; }
 
     /// <summary>
     /// Получает бинарный писатель для записи данных пакета.

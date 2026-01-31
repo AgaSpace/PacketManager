@@ -51,7 +51,7 @@ public class PacketManager(IPacketGenerator generator, INetworkService network) 
     /// <item>Отправляет сгенерированные байты всем клиентам группы через <see cref="INetworkService.SendTo"/>.</item>
     /// </list>
     /// </remarks>
-    public bool ProcessOutgoingPacket(byte messageId, PacketData data, int ignoreClient, int remoteClient)
+    public bool ProcessOutgoingPacket(int messageId, PacketData data, int ignoreClient, int remoteClient)
     {
         var clients = remoteClient == -1
             ? _network.GetActiveClients(ignoreClient).ToList()

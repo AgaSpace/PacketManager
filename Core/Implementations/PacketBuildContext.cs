@@ -14,13 +14,13 @@ namespace PacketManager.Core.Implementations;
 /// <param name="writer">Бинарный писатель.</param>
 /// <param name="targets">Целевые клиенты.</param>
 /// <param name="data">Оригинальные данные.</param>
-internal class PacketBuildContext(byte messageId, BinaryWriter writer,
+internal class PacketBuildContext(int messageId, BinaryWriter writer,
     IReadOnlyCollection<INetworkClient> targets, PacketData data) : IPacketBuildContext
 {
     /// <summary>
     /// Получает идентификатор типа пакета.
     /// </summary>
-    public byte MessageId { get; } = messageId;
+    public int MessageId { get; } = messageId;
 
     /// <summary>
     /// Получает бинарный писатель для записи данных пакета.

@@ -86,7 +86,7 @@ internal class PacketBuilderRegistry : IPacketBuilderRegistry, IDisposable
     /// <param name="playerId">Индекс игрока.</param>
     /// <param name="messageId">Идентификатор типа пакета.</param>
     /// <returns>true, если есть хотя бы один билдер для данного типа.</returns>
-    public bool HasBuilder(int playerId, byte messageId)
+    public bool HasBuilder(int playerId, int messageId)
     {
         return _players.TryGetValue(playerId, out var state) && state.Has(messageId);
     }
@@ -99,7 +99,7 @@ internal class PacketBuilderRegistry : IPacketBuilderRegistry, IDisposable
     /// <returns>
     /// Билдер с наивысшим приоритетом или null, если билдеров нет.
     /// </returns>
-    public IPacketBuilder? GetBuilder(int playerId, byte messageId)
+    public IPacketBuilder? GetBuilder(int playerId, int messageId)
     {
         if (!_players.TryGetValue(playerId, out var state))
             return null;
@@ -121,7 +121,7 @@ internal class PacketBuilderRegistry : IPacketBuilderRegistry, IDisposable
     /// </summary>
     private class PlayerBuilders : IDisposable
     {
-        private readonly ConcurrentDictionary<byte, ImmutableSortedSet<IPacketBuilder>> _builders = new();
+        private readonly ConcurrentDictionary<int, ImmutableSortedSet<IPacketBuilder>> _builders = new();
         private readonly ReaderWriterLockSlim _lock = new();
 
         public Result Add(IPacketBuilder builder)
@@ -167,10 +167,10 @@ internal class PacketBuilderRegistry : IPacketBuilderRegistry, IDisposable
             return _builders.TryGetValue(builder.MessageId, out var set) && set.Contains(builder);
         }
 
-        public bool Has(byte messageId) =>
+        public bool Has(int messageId) =>
             _builders.ContainsKey(messageId) && !_builders[messageId].IsEmpty;
 
-        public IPacketBuilder? GetMax(byte messageId) =>
+        public IPacketBuilder? GetMax(int messageId) =>
             _builders.TryGetValue(messageId, out var set) && !set.IsEmpty
                 ? set.Max
                 : null;

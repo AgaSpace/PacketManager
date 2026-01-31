@@ -5,11 +5,11 @@ using PacketManager.Core.Abstractions;
 namespace PacketManager.Server.Adapters;
 
 /// <summary>
-/// Адаптер клиента Terraria (RemoteClient) для интерфейса INetworkClient.
-/// Оборачивает функциональность RemoteClient в абстракцию Core.
+/// Адаптер клиента Terraria (<see cref="RemoteClient"/>) для интерфейса <see cref="INetworkClient"/>.
+/// Оборачивает функциональность <see cref="RemoteClient"/> в абстракцию <see cref="Core"/>.
 /// </summary>
 /// <remarks>
-/// Создает новый адаптер для RemoteClient.
+/// Создает новый адаптер для <see cref="RemoteClient"/>.
 /// </remarks>
 /// <param name="client">Оригинальный клиент Terraria.</param>
 public class TerrariaNetworkClient(RemoteClient client) : INetworkClient
@@ -17,7 +17,7 @@ public class TerrariaNetworkClient(RemoteClient client) : INetworkClient
     private readonly RemoteClient _client = client;
 
     /// <summary>
-    /// Получает идентификатор клиента (whoAmI).
+    /// Получает идентификатор клиента (<see cref="Entity.whoAmI"/>).
     /// </summary>
     public int Id => _client.Id;
 
@@ -27,13 +27,13 @@ public class TerrariaNetworkClient(RemoteClient client) : INetworkClient
     public bool IsConnected => _client.IsActive;
 
     /// <summary>
-    /// Получает оригинальный RemoteClient для доступа к специфичным методам Terraria.
+    /// Получает оригинальный <see cref="RemoteClient"/> для доступа к специфичным методам <see cref="Terraria"/>.
     /// </summary>
     public RemoteClient Native => _client;
 
     /// <summary>
-    /// Отправляет данные клиенту через сокет Terraria.
-    /// Подавляет исключения IOException, ObjectDisposedException и InvalidOperationException,
+    /// Отправляет данные клиенту через сокет <see cref="Terraria"/>.
+    /// Подавляет исключения <see cref="IOException"/>, <see cref="ObjectDisposedException"/> и <see cref="InvalidOperationException"/>,
     /// которые могут возникнуть при отключении клиента во время отправки.
     /// </summary>
     /// <param name="data">Данные для отправки.</param>
