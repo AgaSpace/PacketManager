@@ -12,7 +12,7 @@ namespace PacketManager.Core.Implementations;
 /// Является точкой входа для обработки всех исходящих пакетов.
 /// Потокобезопасен при условии использования потокобезопасных реализаций зависимостей.
 /// </remarks>
-public class PacketManager(int maxPlayers, IPacketGenerator generator, INetworkService network) : IDisposable
+public class PacketManager(IPacketGenerator generator, INetworkService network) : IDisposable
 {
     private readonly IPacketGenerator _generator = generator;
     private readonly INetworkService _network = network;
@@ -21,7 +21,7 @@ public class PacketManager(int maxPlayers, IPacketGenerator generator, INetworkS
     /// Получает реестр билдеров для управления ими (добавление, удаление, проверка).
     /// </summary>
     /// <value>Экземпляр <see cref="IPacketBuilderRegistry"/>, созданный при конструировании.</value>
-    public IPacketBuilderRegistry Registry { get; } = new PacketBuilderRegistry(maxPlayers);
+    public IPacketBuilderRegistry Registry { get; } = new PacketBuilderRegistry();
 
     /// <summary>
     /// Получает генератор пакетов, используемый для сериализации пакетов в байты.

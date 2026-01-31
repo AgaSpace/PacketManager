@@ -41,7 +41,7 @@ internal class TerrariaBuildContext(byte messageId, BinaryWriter writer,
 
     /// <summary>
     /// Получает вспомогательное числовое значение Num, переданное из OnPacketWrite.
-    /// Может использоваться для специфичной логики Terraria (например, индекса пакета).
+    /// Может использоваться для специфичной логики Terraria (например, индекса игрока).
     /// </summary>
     public int Num { get; } = num;
 }

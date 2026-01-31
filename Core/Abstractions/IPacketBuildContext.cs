@@ -16,7 +16,7 @@ public interface IPacketBuildContext
     /// Получает бинарный писатель для записи данных пакета.
     /// </summary>
     /// <remarks>
-    /// Позиция потока находится сразу после записи MessageId (смещение 3).
+    /// Позиция потока находится сразу после записи <see cref="MessageId"/> (смещение 3).
     /// Для изменения уже записанных данных можно использовать Seek: 
     /// <code>Writer.BaseStream.Position = 3;</code>
     /// </remarks>

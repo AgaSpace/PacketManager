@@ -7,41 +7,48 @@ using PacketManager.Core.Data;
 namespace PacketManager.Core.Implementations;
 
 /// <summary>
-/// Потокобезопасная реализация реестра билдеров пакетов.
-/// Хранит коллекцию билдеров для каждого игрока отдельно, организованную по типам пакетов (MessageId).
-/// Поддерживает сортировку по приоритету и выборку билдера с максимальным приоритетом.
+/// Потокобезопасный реестр билдеров пакетов с ленивой инициализацией.
+/// Поддерживает неограниченное количество игроков (динамическое расширение).
 /// </summary>
 /// <remarks>
-/// Использует <see cref="ConcurrentDictionary{TKey,TValue}"/> для потокобезопасного доступа к игрокам
-/// и <see cref="ReaderWriterLockSlim"/> для синхронизации доступа к коллекции билдеров конкретного игрока.
-/// Внутреннее хранилище использует <see cref="ImmutableSortedSet{T}"/> для эффективной сортировки по приоритету.
+/// В отличие от предыдущих версий, не требует указания maxPlayers при создании
+/// и не предзаполняет словарь. PlayerBuilders создаются по требованию (lazy),
+/// что позволяет использовать библиотеку с модами, увеличивающими слоты игроков
+/// (например, до 500, 1000 и более).
 /// </remarks>
-/// <remarks>
-/// Создает новый экземпляр реестра с указанным максимальным количеством игроков.
-/// </remarks>
-/// <param name="maxPlayers">Максимальное количество игроков (размер массива/пула).</param>
-internal class PacketBuilderRegistry(int maxPlayers) : IPacketBuilderRegistry, IDisposable
+internal class PacketBuilderRegistry : IPacketBuilderRegistry, IDisposable
 {
-    private readonly ConcurrentDictionary<int, PlayerBuilders> _players = new(
-            Enumerable.Range(0, maxPlayers).ToDictionary(i => i, _ => new PlayerBuilders()));
+    private readonly ConcurrentDictionary<int, PlayerBuilders> _players = new();
+
+    /// <summary>
+    /// Получает или создает хранилище билдеров для указанного игрока.
+    /// </summary>
+    /// <param name="playerId">ID игрока (неотрицательное число).</param>
+    /// <returns>Хранилище билдеров для игрока (создается при первом обращении).</returns>
+    private PlayerBuilders GetOrCreateBuilders(int playerId)
+    {
+        return _players.GetOrAdd(playerId, static _ => new PlayerBuilders());
+    }
 
     /// <summary>
     /// Добавляет билдер пакета для указанного игрока.
     /// </summary>
-    /// <param name="playerId">Индекс игрока (whoAmI), должен быть меньше maxPlayers.</param>
-    /// <param name="builder">Экземпляр билдера для добавления. Не может быть null.</param>
+    /// <param name="playerId">Индекс игрока (whoAmI). Должен быть >= 0.</param>
+    /// <param name="builder">Экземпляр билдера для добавления.</param>
     /// <returns>
     /// <see cref="Result.Success"/> при успешном добавлении;
-    /// <see cref="Result.Failure"/> с сообщением "Invalid player ID", если индекс вне диапазона.
+    /// <see cref="Result.Failure"/> если playerId отрицательный.
     /// </returns>
     /// <remarks>
-    /// Можно добавить несколько билдеров с одинаковым MessageId и даже одинаковым приоритетом.
-    /// Они различаются по ссылке (hash code), что позволяет хранить в одном SortedSet множество билдеров.
+    /// Автоматически создает внутренние структуры для playerId при первом обращении.
+    /// Поддерживает playerId > 255 для модов с увеличенным количеством слотов.
     /// </remarks>
     public Result AddBuilder(int playerId, IPacketBuilder builder)
     {
-        if (!_players.TryGetValue(playerId, out var state))
-            return Result.Failure("Invalid player ID");
+        if (playerId < 0)
+            return Result.Failure("Player ID cannot be negative");
+
+        var state = GetOrCreateBuilders(playerId);
         return state.Add(builder);
     }
 
@@ -49,54 +56,49 @@ internal class PacketBuilderRegistry(int maxPlayers) : IPacketBuilderRegistry, I
     /// Удаляет ранее добавленный билдер у указанного игрока.
     /// </summary>
     /// <param name="playerId">Индекс игрока.</param>
-    /// <param name="builder">Тот же экземпляр билдера, который был добавлен ранее (сравнение по ссылке).</param>
+    /// <param name="builder">Экземпляр билдера для удаления.</param>
     /// <returns>
     /// <see cref="Result.Success"/> при успешном удалении;
-    /// <see cref="Result.Failure"/> с сообщением "Player not found" или "Not found", 
-    /// если игрок или билдер не найдены.
+    /// <see cref="Result.Failure"/> если игрок или билдер не найдены.
     /// </returns>
     public Result RemoveBuilder(int playerId, IPacketBuilder builder)
     {
         if (!_players.TryGetValue(playerId, out var state))
             return Result.Failure("Player not found");
+
         return state.Remove(builder);
     }
 
     /// <summary>
-    /// Проверяет, содержит ли реестр указанный экземпляр билдера для конкретного игрока.
+    /// Проверяет, содержит ли реестр указанный экземпляр билдера.
     /// </summary>
     /// <param name="playerId">Индекс игрока.</param>
-    /// <param name="builder">Экземпляр билдера для проверки (сравнение по ссылке).</param>
-    /// <returns>true, если указанный билдер присутствует в реестре для данного игрока; иначе false.</returns>
+    /// <param name="builder">Билдер для проверки.</param>
+    /// <returns>true, если билдер найден; иначе false.</returns>
     public bool Contains(int playerId, IPacketBuilder builder)
     {
         return _players.TryGetValue(playerId, out var state) && state.Contains(builder);
     }
 
     /// <summary>
-    /// Проверяет, есть ли хотя бы один билдер для указанного типа пакета у игрока.
+    /// Проверяет, есть ли билдеры для указанного типа пакета у игрока.
     /// </summary>
     /// <param name="playerId">Индекс игрока.</param>
-    /// <param name="messageId">Идентификатор типа пакета (Message ID).</param>
-    /// <returns>true, если для данного типа пакета зарегистрирован хотя бы один билдер.</returns>
+    /// <param name="messageId">Идентификатор типа пакета.</param>
+    /// <returns>true, если есть хотя бы один билдер для данного типа.</returns>
     public bool HasBuilder(int playerId, byte messageId)
     {
         return _players.TryGetValue(playerId, out var state) && state.Has(messageId);
     }
 
     /// <summary>
-    /// Получает билдер с максимальным приоритетом для указанного типа пакета и игрока.
+    /// Получает билдер с максимальным приоритетом для указанного игрока и типа пакета.
     /// </summary>
     /// <param name="playerId">Индекс игрока.</param>
     /// <param name="messageId">Идентификатор типа пакета.</param>
     /// <returns>
-    /// Билдер с наивысшим значением <see cref="IPacketBuilder.Priority"/> для данного типа пакета;
-    /// или null, если для данного типа нет зарегистрированных билдеров.
+    /// Билдер с наивысшим приоритетом или null, если билдеров нет.
     /// </returns>
-    /// <remarks>
-    /// Использует <see cref="ImmutableSortedSet{T}.Max"/> для получения элемента с максимальным приоритетом
-    /// за O(log n) или O(1) (амортизированно).
-    /// </remarks>
     public IPacketBuilder? GetBuilder(int playerId, byte messageId)
     {
         if (!_players.TryGetValue(playerId, out var state))
@@ -105,43 +107,23 @@ internal class PacketBuilderRegistry(int maxPlayers) : IPacketBuilderRegistry, I
     }
 
     /// <summary>
-    /// Освобождает ресурсы реестра, включая все ReaderWriterLock экземпляров игроков.
+    /// Освобождает ресурсы всех игроков и очищает реестр.
     /// </summary>
     public void Dispose()
     {
-        foreach (var p in _players.Values) p.Dispose();
+        foreach (var p in _players.Values)
+            p.Dispose();
+        _players.Clear();
     }
 
     /// <summary>
-    /// Внутренний класс, управляющий коллекцией билдеров для одного конкретного игрока.
+    /// Внутренний класс-хранилище для одного игрока.
     /// </summary>
-    /// <remarks>
-    /// Использует ReaderWriterLockSlim для оптимизации чтения (множественные читатели) 
-    /// и записи (эксклюзивный доступ).
-    /// </remarks>
     private class PlayerBuilders : IDisposable
     {
-        private readonly ConcurrentDictionary<byte, ImmutableSortedSet<IPacketBuilder>> _builders;
-        private readonly ReaderWriterLockSlim _lock;
+        private readonly ConcurrentDictionary<byte, ImmutableSortedSet<IPacketBuilder>> _builders = new();
+        private readonly ReaderWriterLockSlim _lock = new();
 
-        /// <summary>
-        /// Создает новый экземпляр хранилища билдеров для игрока.
-        /// </summary>
-        public PlayerBuilders()
-        {
-            _builders = new ConcurrentDictionary<byte, ImmutableSortedSet<IPacketBuilder>>();
-            _lock = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
-        }
-
-        /// <summary>
-        /// Добавляет билдер в коллекцию данного игрока.
-        /// </summary>
-        /// <param name="builder">Билдер для добавления.</param>
-        /// <returns>Результат операции.</returns>
-        /// <remarks>
-        /// Использует UpgradeableReadLock для безопасной проверки существования ключа
-        /// с последующим переходом на WriteLock только если требуется создание нового SortedSet.
-        /// </remarks>
         public Result Add(IPacketBuilder builder)
         {
             var key = builder.MessageId;
@@ -162,14 +144,6 @@ internal class PacketBuilderRegistry(int maxPlayers) : IPacketBuilderRegistry, I
             finally { _lock.ExitUpgradeableReadLock(); }
         }
 
-        /// <summary>
-        /// Удаляет билдер из коллекции данного игрока.
-        /// </summary>
-        /// <param name="builder">Билдер для удаления.</param>
-        /// <returns>Результат операции.</returns>
-        /// <remarks>
-        /// Если после удаления коллекция становится пустой, ключ удаляется из словаря для экономии памяти.
-        /// </remarks>
         public Result Remove(IPacketBuilder builder)
         {
             var key = builder.MessageId;
@@ -188,63 +162,24 @@ internal class PacketBuilderRegistry(int maxPlayers) : IPacketBuilderRegistry, I
             finally { _lock.ExitWriteLock(); }
         }
 
-        /// <summary>
-        /// Проверяет наличие конкретного экземпляра билдера в коллекции.
-        /// </summary>
-        /// <param name="builder">Билдер для проверки.</param>
-        /// <returns>true, если билдер найден.</returns>
         public bool Contains(IPacketBuilder builder)
         {
             return _builders.TryGetValue(builder.MessageId, out var set) && set.Contains(builder);
         }
 
-        /// <summary>
-        /// Проверяет, есть ли билдеры для указанного типа сообщения.
-        /// </summary>
-        /// <param name="messageId">Идентификатор типа пакета.</param>
-        /// <returns>true, если есть хотя бы один билдер.</returns>
-        public bool Has(byte messageId)
-        {
-            return _builders.ContainsKey(messageId) && !_builders[messageId].IsEmpty;
-        }
+        public bool Has(byte messageId) =>
+            _builders.ContainsKey(messageId) && !_builders[messageId].IsEmpty;
 
-        /// <summary>
-        /// Получает билдер с максимальным приоритетом для указанного типа сообщения.
-        /// </summary>
-        /// <param name="messageId">Идентификатор типа пакета.</param>
-        /// <returns>Билдер с max приоритетом или null.</returns>
-        public IPacketBuilder? GetMax(byte messageId)
-        {
-            return _builders.TryGetValue(messageId, out var set) && !set.IsEmpty
+        public IPacketBuilder? GetMax(byte messageId) =>
+            _builders.TryGetValue(messageId, out var set) && !set.IsEmpty
                 ? set.Max
                 : null;
-        }
 
-        /// <summary>
-        /// Освобождает ReaderWriterLockSlim.
-        /// </summary>
         public void Dispose() => _lock.Dispose();
     }
 
-    /// <summary>
-    /// Компаратор для сортировки билдеров по приоритету.
-    /// </summary>
-    /// <remarks>
-    /// При равных приоритетах использует RuntimeHelpers.GetHashCode как tie-breaker,
-    /// что позволяет хранить в SortedSet несколько билдеров с одинаковым Priority.
-    /// </remarks>
     private class PriorityComparer : IComparer<IPacketBuilder>
     {
-        /// <summary>
-        /// Сравнивает два билдера по приоритету.
-        /// </summary>
-        /// <param name="x">Первый билдер.</param>
-        /// <param name="y">Второй билдер.</param>
-        /// <returns>
-        /// Отрицательное значение, если x меньше y;
-        /// ноль, если ссылки равны;
-        /// положительное значение, если x больше y.
-        /// </returns>
         public int Compare(IPacketBuilder? x, IPacketBuilder? y)
         {
             if (ReferenceEquals(x, y)) return 0;

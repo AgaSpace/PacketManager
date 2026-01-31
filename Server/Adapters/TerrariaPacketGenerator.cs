@@ -1,5 +1,4 @@
-﻿using System.IO;
-using Terraria;
+﻿using Terraria;
 using Terraria.Localization;
 using PacketManager.Core.Abstractions;
 using PacketManager.Core.Data;
@@ -11,7 +10,7 @@ namespace PacketManager.Server.Adapters;
 /// и создания кастомных пакетов через билдеры.
 /// </summary>
 /// <remarks>
-/// Использует статические поля для хранения перехваченных данных, так как orig_SendData
+/// Использует статические поля для хранения перехваченных данных, так как <see cref="Terraria.NetMessage.SendData(int, int, int, NetworkText, int, float, float, float, int, int, int)"/>
 /// работает через глобальное состояние игры. Потокобезопасность обеспечивается через Lock.
 /// </remarks>
 public class TerrariaPacketGenerator : IPacketGenerator, IDisposable
@@ -22,14 +21,14 @@ public class TerrariaPacketGenerator : IPacketGenerator, IDisposable
     private static readonly int NameHash = "PacketManagerAPI".GetHashCode();
 
     /// <summary>
-    /// Генерирует оригинальный пакет, используя стандартный метод Terraria NetMessage.orig_SendData.
+    /// Генерирует оригинальный пакет, используя стандартный метод Terraria <see cref="Terraria.NetMessage.SendData(int, int, int, NetworkText, int, float, float, float, int, int, int)"/>.
     /// </summary>
     /// <param name="messageId">Идентификатор типа пакета.</param>
-    /// <param name="data">Данные пакета (параметры SendData).</param>
+    /// <param name="data">Данные пакета (параметры <see cref="Terraria.NetMessage.SendData(int, int, int, NetworkText, int, float, float, float, int, int, int)"/>).</param>
     /// <returns>Массив байтов оригинального пакета, включая заголовок длины.</returns>
     /// <remarks>
-    /// Вызывает orig_SendData с специальным флагом ignoreClient = NameHash,
-    /// что вызывает перехват байтов в OnPacketWrite без реальной отправки по сети.
+    /// Вызывает <see cref="Terraria.NetMessage.SendData(int, int, int, NetworkText, int, float, float, float, int, int, int)"/> с специальным флагом ignoreClient = NameHash,
+    /// что вызывает перехват байтов в <see cref="NetMessage.OnPacketWrite(int, MemoryStream, OTAPI.PacketWriter, int, int, int, NetworkText, int, float, float, float, int, int, int)"/> без реальной отправки по сети.
     /// Использует Lock для потокобезопасности.
     /// </remarks>
     public byte[] GenerateOriginal(byte messageId, PacketData data)
@@ -63,7 +62,7 @@ public class TerrariaPacketGenerator : IPacketGenerator, IDisposable
     /// <param name="targets">Целевые клиенты.</param>
     /// <returns>Массив байтов готового пакета с заголовком длины.</returns>
     /// <remarks>
-    /// Создает MemoryStream, записывает MessageId, вызывает Build(),
+    /// Создает <see cref="MemoryStream"/>, записывает <paramref name="messageId"/>, вызывает <see cref="IPacketBuilder.Build(IPacketBuildContext)"/>,
     /// затем возвращается в начало и записывает длину пакета.
     /// </remarks>
     public byte[] GenerateCustom(IPacketBuilder builder, byte messageId, PacketData data,
@@ -88,12 +87,12 @@ public class TerrariaPacketGenerator : IPacketGenerator, IDisposable
     }
 
     /// <summary>
-    /// Сохраняет перехваченный буфер байтов из оригинального метода SendData.
+    /// Сохраняет перехваченный буфер байтов из оригинального метода <see cref="Terraria.NetMessage.SendData(int, int, int, NetworkText, int, float, float, float, int, int, int)"/>.
     /// </summary>
     /// <param name="buffer">Массив байтов пакета.</param>
     /// <param name="length">Фактическая длина пакета.</param>
     /// <remarks>
-    /// Вызывается из OnPacketWrite хука при обнаружении флага NameHash.
+    /// Вызывается из <see cref="NetMessage.OnPacketWrite(int, MemoryStream, OTAPI.PacketWriter, int, int, int, NetworkText, int, float, float, float, int, int, int)"/> хука при обнаружении флага NameHash.
     /// </remarks>
     public static void CaptureBuffer(byte[] buffer, int length)
     {
@@ -101,7 +100,7 @@ public class TerrariaPacketGenerator : IPacketGenerator, IDisposable
     }
 
     /// <summary>
-    /// Сохраняет вспомогательное значение Num из OnPacketWrite.
+    /// Сохраняет вспомогательное значение Num из <see cref="NetMessage.OnPacketWrite(int, MemoryStream, OTAPI.PacketWriter, int, int, int, NetworkText, int, float, float, float, int, int, int)"/>.
     /// </summary>
     /// <param name="num">Значение параметра num.</param>
     public static void SetLastNum(int num) => _lastNum = num;

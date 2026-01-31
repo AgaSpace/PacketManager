@@ -46,7 +46,7 @@ public class PacketManagerPlugin(Main game) : TerrariaPlugin(game)
     {
         var network = new TerrariaNetworkService();
         _generator = new TerrariaPacketGenerator();
-        _manager = new Core.Implementations.PacketManager(Netplay.Clients.Length, _generator, network);
+        _manager = new Core.Implementations.PacketManager(_generator, network);
 
         Facade.Initialize(_manager);
 
