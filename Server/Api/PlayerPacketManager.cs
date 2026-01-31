@@ -9,15 +9,13 @@ namespace PacketManager.Server.Api;
 /// <remarks>
 /// Получается через расширение <see cref="Extensions.TSPlayerExtensions.GetPacketManager(TSPlayer)"/>.
 /// </remarks>
-public class PlayerPacketManager
+/// <remarks>
+/// Создает новый экземпляр менеджера для указанного игрока.
+/// </remarks>
+/// <param name="id">Индекс игрока (whoAmI).</param>
+public class PlayerPacketManager(int id)
 {
-    private readonly int _id;
-
-    /// <summary>
-    /// Создает новый экземпляр менеджера для указанного игрока.
-    /// </summary>
-    /// <param name="id">Индекс игрока (whoAmI).</param>
-    public PlayerPacketManager(int id) => _id = id;
+    private readonly int _id = id;
 
     /// <summary>
     /// Добавляет билдер пакета для этого игрока.

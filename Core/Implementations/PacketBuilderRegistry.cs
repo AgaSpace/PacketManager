@@ -22,7 +22,7 @@ namespace PacketManager.Core.Implementations;
 /// <param name="maxPlayers">Максимальное количество игроков (размер массива/пула).</param>
 internal class PacketBuilderRegistry(int maxPlayers) : IPacketBuilderRegistry, IDisposable
 {
-    private readonly ConcurrentDictionary<int, PlayerBuilders> _players = new ConcurrentDictionary<int, PlayerBuilders>(
+    private readonly ConcurrentDictionary<int, PlayerBuilders> _players = new(
             Enumerable.Range(0, maxPlayers).ToDictionary(i => i, _ => new PlayerBuilders()));
 
     /// <summary>

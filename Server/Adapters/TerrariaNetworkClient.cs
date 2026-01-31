@@ -8,9 +8,13 @@ namespace PacketManager.Server.Adapters;
 /// Адаптер клиента Terraria (RemoteClient) для интерфейса INetworkClient.
 /// Оборачивает функциональность RemoteClient в абстракцию Core.
 /// </summary>
-public class TerrariaNetworkClient : INetworkClient
+/// <remarks>
+/// Создает новый адаптер для RemoteClient.
+/// </remarks>
+/// <param name="client">Оригинальный клиент Terraria.</param>
+public class TerrariaNetworkClient(RemoteClient client) : INetworkClient
 {
-    private readonly RemoteClient _client;
+    private readonly RemoteClient _client = client;
 
     /// <summary>
     /// Получает идентификатор клиента (whoAmI).
@@ -26,15 +30,6 @@ public class TerrariaNetworkClient : INetworkClient
     /// Получает оригинальный RemoteClient для доступа к специфичным методам Terraria.
     /// </summary>
     public RemoteClient Native => _client;
-
-    /// <summary>
-    /// Создает новый адаптер для RemoteClient.
-    /// </summary>
-    /// <param name="client">Оригинальный клиент Terraria.</param>
-    public TerrariaNetworkClient(RemoteClient client)
-    {
-        _client = client;
-    }
 
     /// <summary>
     /// Отправляет данные клиенту через сокет Terraria.
