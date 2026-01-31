@@ -105,7 +105,7 @@ public override void Initialize()
 public interface IPacketBuilder
 {
     int Priority { get; }      // Чем больше, тем выше приоритет
-    byte MessageId { get; }    // ID пакета (из PacketTypes)
+    int MessageId { get; }     // ID пакета (из PacketTypes)
     void Build(IPacketBuildContext context);
 }
 ```
@@ -116,7 +116,7 @@ public interface IPacketBuilder
 ```csharp
 public interface IPacketBuildContext
 {
-    byte MessageId { get; }                    // Тип пакета
+    int MessageId { get; }                     // Тип пакета
     BinaryWriter Writer { get; }               // Писатель потока
     PacketData OriginalData { get; }           // Оригинальные аргументы SendData
     IReadOnlyCollection<INetworkClient> Targets { get; } // Получатели
@@ -132,7 +132,7 @@ var manager = player.GetPacketManager();
 // Методы:
 bool Add(IPacketBuilder builder);           // Добавить билдер
 bool Remove(IPacketBuilder builder);        // Удалить билдер  
-bool Has(byte messageId);                   // Проверить наличие билдера для типа
+bool Has(int messageId);                    // Проверить наличие билдера для типа
 ```
 
 ### Глобальный доступ через Facade
