@@ -75,6 +75,7 @@ namespace MyPlugin.Builders
 ### 2. Регистрация билдера
 
 ```csharp
+using PacketManager.Server.Api;
 using PacketManager.Server.Extensions;
 
 public override void Initialize()
