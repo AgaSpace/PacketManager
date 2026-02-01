@@ -44,6 +44,15 @@ public static class Facade
         Registry.RemoveBuilder(playerId, builder).IsSuccess;
 
     /// <summary>
+    /// Проверяет, содержит ли реестр указанный билдер для игрока.
+    /// </summary>
+    /// <param name="playerId">Индекс игрока.</param>
+    /// <param name="builder">Билдер для проверки.</param>
+    /// <returns>true, если билдер добавлен.</returns>
+    public static bool Contains(int playerId, IPacketBuilder builder) =>
+        Registry.Contains(playerId, builder);
+
+    /// <summary>
     /// Проверяет наличие билдера для указанного типа пакета у игрока.
     /// </summary>
     /// <param name="playerId">Индекс игрока.</param>
