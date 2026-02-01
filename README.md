@@ -50,8 +50,8 @@ namespace MyPlugin.Builders
         // Приоритет выше = выполнится первым (если несколько билдеров на один пакет)
         public int Priority => 100;
         
-        // PacketTypes.PlayerHP = 16
-        public int MessageId => 16;
+        // PacketTypes.PlayerHp = Terraria.ID.MessageID.PlayerLifeMana = 16
+        public int MessageId => Terraria.ID.MessageID.PlayerLifeMana;
 
         public void Build(IPacketBuildContext context)
         {
@@ -82,15 +82,24 @@ public override void Initialize()
     // Получаем менеджер для конкретного игрока
     var player = TShock.Players[0];
     var manager = player.GetPacketManager();
-    
+	// Или через ID напрямую
+	var manager = new PlayerPacketManager(0); // 0 - ID игрока
+	
     // Добавляем билдер
-    manager.Add(new FakeHealthBuilder());
+	var builder = new FakeHealthBuilder();
+    manager.Add(builder);
     
-    // Проверяем наличие
-    if (manager.Has(16)) // 16 = PlayerHP
+    // Проверяем наличие билдеров на 16 пакете
+    if (manager.Has(Terraria.ID.MessageID.PlayerLifeMana)) // 16 = PlayerHp
     {
-        Console.WriteLine("Билдер активен!");
+        Console.WriteLine("На 16 пакете есть какие-то билдеры!");
     }
+	
+	// Проверяем наличие нашего билдера
+	if (manager.Contains(builder))
+	{
+		Console.WriteLine($"У игрока есть билдер {nameof(FakeHealthBuilder)}");
+	}
 }
 ```
 
@@ -104,7 +113,7 @@ public override void Initialize()
 ```csharp
 public interface IPacketBuilder
 {
-    int Priority { get; }      // Чем больше, тем выше приоритет
+    int Priority { get => 0; } // Default = 0, чем выше - тем важнее
     int MessageId { get; }     // ID пакета (из PacketTypes)
     void Build(IPacketBuildContext context);
 }
@@ -123,16 +132,48 @@ public interface IPacketBuildContext
 }
 ```
 
+#### `PacketData`
+Структура с параметрами исходящего пакета (аргументы `SendData`):
+
+```csharp
+public readonly record struct PacketData(
+    int RemoteClient,  // Целевой клиент (-1 = всем)
+    string? Text,      // Текст (чат, имена NPC)
+    int Number,        // Основной параметр (обычно whoAmI)
+    float Number2,     // X / скорость / текущее HP
+    float Number3,     // Y / мана / rotation  
+    float Number4,     // Z / max HP / scale
+    int Number5,       // Доп. int
+    int Number6,       // Доп. int
+    int Number7        // Доп. int
+);
+```
+
+**Использование в билдере:**
+```csharp
+public void Build(IPacketBuildContext context)
+{
+    int playerId = context.OriginalData.Number;  			// whoAmI
+	short itemIndex = (short)context.OriginalData.Number2;	// item slot in inventory
+    byte prefix = (byte)context.OriginalData.Number3;		// item prefix
+    // ... модификация данных пакета
+}
+```
+
 ### Расширения для TSPlayer
 
 ```csharp
 // Получение менеджера пакетов
 var manager = player.GetPacketManager();
 
+// Свойства:
+int manager.Index; // ID игрока (whoAmI), удобно для отладки
+
 // Методы:
 bool Add(IPacketBuilder builder);           // Добавить билдер
 bool Remove(IPacketBuilder builder);        // Удалить билдер  
-bool Has(int messageId);                    // Проверить наличие билдера для типа
+bool Contains(IPacketBuilder builder);		// Проверить наличие билдера для типа
+bool Has(int messageId);                    // Проверить наличие билдеров для типа
 ```
 
 ### Глобальный доступ через Facade
@@ -183,48 +224,52 @@ if (ignoreClient == NameHash)
 
 ## 🛠️ Расширенные сценарии
 
-### Seek/Modify (частичная модификация)
-Изменение только части пакета:
+### Инкапсуляция данных в билдере (Паттерн WorldScene)
+Храните nullable-поля в билдере, чтобы перезаписывать только нужные значения, а остальные брать из реального мира (`Main.*`) динамически при генерации пакета.
 
 ```csharp
-public void Build(IPacketBuildContext context)
+public class TimeSetBuilder : IPacketBuilder
 {
-    // Сначала пишем оригинальные данные
-    context.Writer.Write((byte)context.OriginalData.Number);
-    context.Writer.Write((short)100); // HP placeholder
-    
-    // Запоминаем позицию HP
-    long hpPosition = context.Writer.BaseStream.Position - 2;
-    
-    // Пишем остальное
-    context.Writer.Write((short)500); // MaxHP
-    
-    // Возвращаемся и патчим HP
-    context.Writer.BaseStream.Position = hpPosition;
-    context.Writer.Write((short)999); // Новое HP
+    public int MessageId => 18; // TimeSet
+
+    // Nullable поля: null = использовать Main.* при генерации
+    public bool? DayTime;
+    public int? Time;
+    public float? SunModY;
+    public float? MoonModY;
+
+    public void Build(IPacketBuildContext context)
+    {
+        // Fallback на Main.* если значение не задано (??)
+        context.Writer.Write((byte)((DayTime ?? Main.dayTime) ? 1 : 0));
+        context.Writer.Write(Time ?? (int)Main.time);
+        context.Writer.Write(SunModY ?? Main.sunModY);
+        context.Writer.Write(MoonModY ?? Main.moonModY);
+    }
 }
 ```
 
-### Условная логика по клиентам
-Разные данные для разных получателей:
+**Применение:**
 
 ```csharp
-public void Build(IPacketBuildContext context)
-{
-    // Targets содержит список получателей этого пакета
-    var playerIds = context.Targets.Select(t => t.Id).ToList();
-    
-    if (playerIds.Contains(0)) // Если среди получателей есть админ (ID 0)
-    {
-        // Показываем реальные данные админу
-        context.Writer.Write(realData);
-    }
-    else
-    {
-        // Фейковые данные для остальных
-        context.Writer.Write(fakeData);
-    }
-}
+// Только ускоряем время для игрока, остальное (солнце/луна) как в Main
+var builder = new TimeSetBuilder { Time = 12000 };
+player.GetPacketManager().Add(builder);
+
+// Или полностью кастомная сцена
+var fullScene = new TimeSetBuilder 
+{ 
+    DayTime = true, 
+    Time = 27000, 
+    SunModY = -50, 
+    MoonModY = 100 
+};
+player.GetPacketManager().Add(fullScene);
+
+fullScene.DayTime = false; // Изменяем значение в билдере ПОСЛЕ добавления
+// Важно: так как билдер хранится по ссылке, изменение полей сразу влияет 
+// на все будущие пакеты для этого игрока (перегенерация при каждом SendData)
+player.SendData(fullScene.MessageId);
 ```
 
 ## 📁 Структура проекта
@@ -250,9 +295,7 @@ PacketManager/
 
 1. **Потокобезопасность**: Все методы `PacketManager` потокобезопасны. `Build()` вызывается в контексте игрового потока (Main thread).
 
-2. **Производительность**: Группировка клиентов минимизирует вызовы `GenerateOriginal`. Не создавайте билдеры с высокой частотой (не в цикле каждого тика).
-
-3. **Ограничения**: Нельзя модифицировать пакеты, которые не проходят через `NetMessage.SendData` (например, некоторые внутренние пакеты vanilla).
+2. **Производительность**: Группировка клиентов минимизирует вызовы `GenerateOriginal`.
 
 ## 📝 Лицензия
 
